@@ -60,6 +60,7 @@ type ModelCapabilities struct {
 	SupportsMultimodalToolOutput    *bool `json:"supports_multimodal_tool_output,omitempty"`
 	SupportsResponseSchemaWithTools *bool `json:"supports_response_schema_with_tools,omitempty"`
 	SupportsForcedToolChoice        *bool `json:"supports_forced_tool_choice,omitempty"` // false ⇒ tool_choice any/tool rejected (Fable 5.1+)
+	SupportsAsyncTools              *bool `json:"supports_async_tools,omitempty"`        // accepts OpenAI async on tools and replayed call items
 
 	// Baseline request-surface flags. These drive the compat plugin's
 	// parameter allowlist rather than provider request shaping, so they are

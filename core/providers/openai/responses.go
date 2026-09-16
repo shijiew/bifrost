@@ -772,6 +772,11 @@ func ToOpenAIResponsesRequest(ctx *schemas.BifrostContext, bifrostReq *schemas.B
 	// Filter out tools that OpenAI doesn't support
 	req.filterUnsupportedTools()
 
+	// Models without async tool calling 400 on async in tools and in replayed call items.
+	if !caps.SupportsAsyncTools(defaultSupportsAsyncTools(capModel)) {
+		req.stripAsyncTools()
+	}
+
 	if bifrostReq.Params != nil {
 		req.ExtraParams = bifrostReq.Params.ExtraParams
 	}
@@ -903,6 +908,31 @@ func assistantOutputTextAsInputText(message schemas.ResponsesMessage) schemas.Re
 	contentCopy.ContentBlocks = newBlocks
 	message.Content = &contentCopy
 	return message
+}
+
+// stripAsyncTools removes async from tools and replayed call items, copying what still shares memory with the caller.
+func (resp *OpenAIResponsesRequest) stripAsyncTools() {
+	for i := range resp.Tools {
+		resp.Tools[i].Async = nil
+		ns := resp.Tools[i].ResponsesToolNamespace
+		if ns == nil || !slices.ContainsFunc(ns.Tools, func(t schemas.ResponsesTool) bool { return t.Async != nil }) {
+			continue
+		}
+		nsCopy := *ns
+		nsCopy.Tools = slices.Clone(ns.Tools)
+		for j := range nsCopy.Tools {
+			nsCopy.Tools[j].Async = nil
+		}
+		resp.Tools[i].ResponsesToolNamespace = &nsCopy
+	}
+	items := resp.Input.OpenAIResponsesRequestInputArray
+	for i := range items {
+		if toolMsg := items[i].ResponsesToolMessage; toolMsg != nil && toolMsg.Async != nil {
+			toolMsgCopy := *toolMsg
+			toolMsgCopy.Async = nil
+			items[i].ResponsesToolMessage = &toolMsgCopy
+		}
+	}
 }
 
 func (resp *OpenAIResponsesRequest) filterUnsupportedTools() {
