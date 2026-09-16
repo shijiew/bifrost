@@ -7203,11 +7203,11 @@ func convertBifrostFunctionCallOutputToAnthropicToolResultBlock(msg *schemas.Res
 		}
 
 		// Set is_error if there's an error message or the status indicates an error
-		if msg.ResponsesToolMessage.Error != nil && *msg.ResponsesToolMessage.Error != "" {
+		if errText := msg.ResponsesToolMessage.Error.Text(); errText != "" {
 			toolResultBlock.IsError = schemas.Ptr(true)
 			if toolResultBlock.Content == nil {
 				toolResultBlock.Content = &AnthropicContent{
-					ContentStr: msg.ResponsesToolMessage.Error,
+					ContentStr: &errText,
 				}
 			}
 		} else if msg.Status != nil && *msg.Status == "incomplete" {
@@ -7259,11 +7259,11 @@ func convertBifrostComputerCallOutputToAnthropicToolResultBlock(msg *schemas.Res
 		}
 
 		// Set is_error if there's an error message or the status indicates an error
-		if msg.ResponsesToolMessage.Error != nil && *msg.ResponsesToolMessage.Error != "" {
+		if errText := msg.ResponsesToolMessage.Error.Text(); errText != "" {
 			toolResultBlock.IsError = schemas.Ptr(true)
 			if toolResultBlock.Content == nil {
 				toolResultBlock.Content = &AnthropicContent{
-					ContentStr: msg.ResponsesToolMessage.Error,
+					ContentStr: &errText,
 				}
 			}
 		} else if msg.Status != nil && *msg.Status == "incomplete" {
@@ -7290,11 +7290,11 @@ func convertBifrostMCPCallOutputToAnthropicToolResultBlock(msg *schemas.Response
 		}
 
 		// Set is_error if there's an error message or the status indicates an error
-		if msg.ResponsesToolMessage.Error != nil && *msg.ResponsesToolMessage.Error != "" {
+		if errText := msg.ResponsesToolMessage.Error.Text(); errText != "" {
 			toolResultBlock.IsError = schemas.Ptr(true)
 			if toolResultBlock.Content == nil {
 				toolResultBlock.Content = &AnthropicContent{
-					ContentStr: msg.ResponsesToolMessage.Error,
+					ContentStr: &errText,
 				}
 			}
 		} else if msg.Status != nil && *msg.Status == "incomplete" {
