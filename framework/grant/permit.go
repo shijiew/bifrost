@@ -31,6 +31,15 @@ const (
 	PermitVirtualKey PermitType = "vk"
 	// PermitAccessProfile marks permits whose access comes from a profile attached to a caller.
 	PermitAccessProfile PermitType = "access_profile"
+	// PermitTeamAccessProfile, PermitBusinessUnitAccessProfile and PermitCustomerAccessProfile mark
+	// permits whose access comes from a profile attached to a team, business unit or customer. Such a
+	// profile applies to everything under the entity — its members' requests and the keys it owns —
+	// and joins the caller's other permits under union, so it widens what may be reached. One kind
+	// each rather than one shared kind, because a refusal has to say whose profile it named: "your
+	// team's access profile" and "your business unit's" are different answers.
+	PermitTeamAccessProfile         PermitType = "team_access_profile"
+	PermitBusinessUnitAccessProfile PermitType = "business_unit_access_profile"
+	PermitCustomerAccessProfile     PermitType = "customer_access_profile"
 	// PermitProject marks permits whose access comes from a project a request names. A project is
 	// not something the caller belongs to but something the request opts into, so it grants
 	// alongside whatever the caller already holds rather than instead of it. PrettyString needs no
@@ -50,6 +59,12 @@ func (t PermitType) PrettyString() string {
 		return "virtual key"
 	case PermitAccessProfile:
 		return "access profile"
+	case PermitTeamAccessProfile:
+		return "team access profile"
+	case PermitBusinessUnitAccessProfile:
+		return "business unit access profile"
+	case PermitCustomerAccessProfile:
+		return "customer access profile"
 	default:
 		return string(t)
 	}

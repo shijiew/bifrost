@@ -402,6 +402,9 @@ func TestPermitTypePrettyStringNeverRendersAnIdentifier(t *testing.T) {
 	}{
 		{PermitVirtualKey, "virtual key"},
 		{PermitAccessProfile, "access profile"},
+		{PermitTeamAccessProfile, "team access profile"},
+		{PermitBusinessUnitAccessProfile, "business unit access profile"},
+		{PermitCustomerAccessProfile, "customer access profile"},
 		// Served by the default, because "project" is already the word a refusal should say.
 		{PermitProject, "project"},
 	} {
