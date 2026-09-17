@@ -494,6 +494,7 @@ var configstoreMigrationSteps = []migrationStep{
 	{IDs: []string{"add_hidden_request_types_json_column"}, run: migrationAddHiddenRequestTypesJSONColumn},
 	{IDs: []string{"add_use_openai_endpoints_column"}, run: migrationAddUseOpenAIEndpointsColumn},
 	{IDs: []string{"add_time_of_day_pricing_columns"}, run: migrationAddTimeOfDayPricingColumns},
+	{IDs: []string{"add_virtual_key_business_unit_column"}, run: migrationAddVirtualKeyBusinessUnitColumn},
 }
 
 // videoResolutionPricingColumns are the resolution-banded video output rate columns.
@@ -13555,6 +13556,45 @@ func migrationAddTimeOfDayPricingColumns(ctx context.Context, db *gorm.DB, logge
 				}
 			}
 			return nil
+		},
+	}})
+	if err := m.Migrate(); err != nil {
+		return fmt.Errorf("error running %s migration: %w", migrationName, err)
+	}
+	return nil
+}
+
+// migrationAddVirtualKeyBusinessUnitColumn adds business_unit_id to governance_virtual_keys, the
+// third owner a key can have alongside a team and a customer. A business unit is an enterprise
+// table this module does not model, so the column is a bare indexed varchar with no foreign key:
+// what it points at is resolved by whoever owns business units, and a deployment without them
+// simply never writes it.
+func migrationAddVirtualKeyBusinessUnitColumn(ctx context.Context, db *gorm.DB, logger schemas.Logger) error {
+	migrationName := "add_virtual_key_business_unit_column"
+	logger.Info("[configstore] starting migration %s", migrationName)
+	defer logger.Info("[configstore] finished migration %s", migrationName)
+	m := migrator.New(db, migrator.DefaultOptions, []*migrator.Migration{{
+		ID: migrationName,
+		Migrate: func(tx *gorm.DB) error {
+			tx = tx.WithContext(ctx)
+			if err := addColumnIfNotExists(tx, logger, &tables.TableVirtualKey{}, "business_unit_id"); err != nil {
+				return fmt.Errorf("failed to add business_unit_id column to governance_virtual_keys: %w", err)
+			}
+			if !tx.Migrator().HasIndex(&tables.TableVirtualKey{}, "idx_governance_virtual_keys_business_unit_id") {
+				if err := tx.Exec("CREATE INDEX idx_governance_virtual_keys_business_unit_id ON governance_virtual_keys (business_unit_id)").Error; err != nil {
+					return fmt.Errorf("failed to index business_unit_id on governance_virtual_keys: %w", err)
+				}
+			}
+			return nil
+		},
+		Rollback: func(tx *gorm.DB) error {
+			tx = tx.WithContext(ctx)
+			if tx.Migrator().HasIndex(&tables.TableVirtualKey{}, "idx_governance_virtual_keys_business_unit_id") {
+				if err := tx.Exec("DROP INDEX idx_governance_virtual_keys_business_unit_id").Error; err != nil {
+					return fmt.Errorf("failed to drop business_unit_id index from governance_virtual_keys: %w", err)
+				}
+			}
+			return dropColumnIfExists(tx, logger, &tables.TableVirtualKey{}, "business_unit_id")
 		},
 	}})
 	if err := m.Migrate(); err != nil {

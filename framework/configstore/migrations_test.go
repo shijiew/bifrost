@@ -3935,3 +3935,27 @@ func TestMigrationAddGithubCopilotConfigColumns_NonRollbackable(t *testing.T) {
 	assert.Equal(t, "-----BEGIN RSA PRIVATE KEY-----", got.GithubCopilotKeyConfig.PrivateKey.GetValue(),
 		"the private key must survive the refused rollback")
 }
+
+// TestMigrationAddVirtualKeyBusinessUnitColumn covers the upgrade path for business-unit key
+// ownership: an installation whose governance_virtual_keys predates the column gets it and its
+// index, and a re-run over an already-migrated table is a no-op rather than an error.
+func TestMigrationAddVirtualKeyBusinessUnitColumn(t *testing.T) {
+	db := setupVKTestDBWithoutRotationColumns(t)
+	ctx := context.Background()
+	mg := db.Migrator()
+
+	require.False(t, mg.HasColumn(&tables.TableVirtualKey{}, "business_unit_id"),
+		"business_unit_id must not exist before the migration")
+
+	require.NoError(t, migrationAddVirtualKeyBusinessUnitColumn(ctx, db, testMigrationLogger))
+
+	assert.True(t, mg.HasColumn(&tables.TableVirtualKey{}, "business_unit_id"),
+		"business_unit_id column should exist after migration")
+	assert.True(t, mg.HasIndex(&tables.TableVirtualKey{}, "idx_governance_virtual_keys_business_unit_id"),
+		"business_unit_id must be indexed: it is walked per request to find the key's owner")
+
+	// Idempotent: the column and index already being there is the normal case on every pod that
+	// is not the one that ran the migration first.
+	require.NoError(t, db.Exec("DELETE FROM migrations WHERE id = ?", "add_virtual_key_business_unit_column").Error)
+	require.NoError(t, migrationAddVirtualKeyBusinessUnitColumn(ctx, db, testMigrationLogger))
+}
